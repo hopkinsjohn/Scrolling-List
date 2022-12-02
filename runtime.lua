@@ -191,6 +191,7 @@ end
 for i, Ctrl in pairs (Controls['Value']) do
   Ctrl.EventHandler = function()
     UpdateValueTable()
+    Controls['User Input Flag'].Boolean = true
   end
 end
 
