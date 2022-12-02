@@ -1,0 +1,1290 @@
+-- Basic Framework Plugin
+-- by QSC
+-- October 2020
+
+-- Information block for the plugin
+PluginInfo = {
+  Name = "Scrolling List",
+  Version = "1",
+  BuildVersion = "0.0.0.406",
+  Id = "eceb7f77-073f-43b4-991c-2eb7a4181e19",
+  Author = "jhopkins - Onyx AV",
+  Description = "A list that scrolls, kinda."  
+}
+
+-- Define the color of the plugin object in the design
+function GetColor(props)
+  return { 5, 97, 165 }
+end
+
+-- The name that will initially display when dragged into a design
+function GetPrettyName(props)
+  return "Scrolling List v." .. PluginInfo.Version
+end
+
+-- Optional function used if plugin has multiple pages
+PageNames = { "Scrolling", "List" }  --List the pages within the plugin
+function GetPages(props)
+  local pages = {}
+    for ix,name in ipairs(PageNames) do
+      table.insert(pages, {name = PageNames[ix]})
+    end
+--
+  return pages
+end
+
+-- Define User configurable Properties of the plugin
+function GetProperties()
+  local props = {}
+    
+    table.insert(props, {
+      Name = "Debug Print",
+      Type = "enum",
+      Choices = {"None", "Tx/Rx", "Tx", "Rx", "Function Calls", "All"},
+      Value = "None"
+    })
+    
+    table.insert(props, { -- for enum property types
+      Name = "List Buttons",
+      Type = "integer",
+      Min = 4,
+      Max = 50,
+      Value = 10,  -- Default Option
+    })
+    
+    table.insert(props, { 
+      Name = "Orientation",
+      Type = "enum",
+      Choices = {"Vertical", "Horizontal"},
+      Value = "Vertical"  -- Default Option
+    })
+    
+    table.insert(props, { -- for enum property types
+      Name = "Scrolling Buttons",
+      Type = "integer",
+      Min = 2,
+      Max = 10,
+      Value = 5,  -- Default Option
+    })
+  return props
+end
+
+-- Optional function to define pins on the plugin that are not connected to a Control
+function GetPins(props)
+  local pins = {}
+  ------- NOTES
+  --[[
+    This is where physical permanent inputs / outputs are defined
+  
+  ]]
+  
+  --[[
+    
+  table.insert(pins,{
+    Name = "Audio Output",
+    Direction = "output",
+  })
+  
+  ]]--
+  return pins
+end
+
+-- Optional function to update available properties when properties are altered by the user
+function RectifyProperties(props)
+  if props.plugin_show_debug.Value == false then 
+    props["Debug Print"].IsHidden = true 
+  end
+  return props
+end
+
+-- Optional function to define components used within the plugin
+function GetComponents(props)
+  local components = {}
+  return components
+end
+
+-- Optional function to define wiring of components used within the plugin
+function GetWiring(props)
+  local wiring = {}
+  return wiring
+end
+
+-- Defines the Controls used within the plugin
+function GetControls(props)
+  local ctrls = {}
+  
+  ---------- Variables
+  local MaxButtons = 50
+  local MaxScrollingButtons = 10
+  local TotalButtonCount = props["List Buttons"].Value
+  local ScrollingButtonCount = props["Scrolling Buttons"].Value
+  local Orientation = props["Orientation"].Value
+  
+  if Orientation == "Vertical" then
+    SliderMaxValue = TotalButtonCount
+    SliderMinValue = ScrollingButtonCount
+  else
+    SliderMaxValue = ScrollingButtonCount
+    SliderMinValue = TotalButtonCount
+  end
+  
+  -- all options
+  table.insert(ctrls, {
+    Name = "Button",
+    ControlType = "Button",
+    ButtonType = "Toggle",
+    Count = MaxButtons,
+    UserPin = true,
+    PinStyle = "Output",
+  })
+  table.insert(ctrls, {
+    Name = "Trigger",
+    ControlType = "Button",
+    ButtonType = "Trigger",
+    Count = MaxButtons,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  table.insert(ctrls, {
+    Name = "Legend",
+    ControlType = "Text",
+    Count = MaxButtons,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  table.insert(ctrls, {
+    Name = "Value",
+    ControlType = "Text",
+    Count = MaxButtons,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  
+  
+  -- scrolling options
+  table.insert(ctrls, {
+    Name = "Scrolling Button",
+    ControlType = "Button",
+    ButtonType = "Toggle",
+    Count = MaxScrollingButtons,
+    UserPin = true,
+    PinStyle = "Output",
+  })
+  table.insert(ctrls, {
+    Name = "Scrolling Trigger",
+    ControlType = "Button",
+    ButtonType = "Trigger",
+    Count = MaxScrollingButtons,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  table.insert(ctrls, {
+    Name = "Scrolling Button Int",
+    ControlType = "Indicator",
+    IndicatorType = "Text",
+    Count = MaxScrollingButtons,
+    UserPin = false,
+  })
+  table.insert(ctrls,{
+    Name = "Nav Up",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    IconType = "Icon",
+    Icon = "Arrow Up"
+  })
+  table.insert(ctrls,{
+    Name = "Nav Down",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    IconType = "Icon",
+    Icon = "Arrow Down"
+  })
+  table.insert(ctrls,{
+    Name = "Nav Left",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    IconType = "Icon",
+    Icon = "Arrow Left"
+  })
+  table.insert(ctrls,{
+    Name = "Nav Right",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    IconType = "Icon",
+    Icon = "Arrow Right"
+  })
+  table.insert(ctrls,{
+    Name = "Slider",
+    ControlType = "Knob",
+    Min = SliderMinValue, 
+    --Max = 25,
+    Max = SliderMaxValue,
+    ControlUnit = "Integer",
+    Count = 1,
+    DefaultValue = 25,
+    UserPin = true,
+    PinStyle = "Input",
+  })
+  
+  table.insert(ctrls,{
+    Name = "Reset",
+    ControlType = "Button",
+    ButtonType = "Trigger",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    IconType = "Icon",
+    Icon = "X Circle"
+  })
+  
+  
+  -- "output"
+  -- selection combobox
+  table.insert(ctrls, {
+    Name = "ComboBox",
+    ControlType = "Text",
+    Count = 1,
+    UserPin = false,
+  })
+  -- selected value
+  table.insert(ctrls, {
+    Name = "Selected Value",
+    ControlsType = "Text",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  -- selected legend
+  table.insert(ctrls, {
+    Name = "Selected Legend",
+    ControlType = "Text",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Both",
+  })
+  -- selected legend display
+  table.insert(ctrls, {
+    Name = "Selected Legend Display",
+    ControlType = "Indicator",
+    IndicatorType = "Text",
+    UserPin = false, 
+  })
+  -- user input has been entered
+  table.insert(ctrls, {
+    Name = "User Input Flag",
+    ControlType = "Button",
+    ButtonType = "Toggle",
+    Count = 1,
+    UserPin = false,
+  })
+  
+  
+  
+  return ctrls
+end
+
+--Layout of controls and graphics for the plugin UI to display
+function GetControlLayout(props)
+  local layout = {}
+  local graphics = {}
+  local CurrentPage = PageNames[props["page_index"].Value]
+  
+  ------------------ local variables
+  local TotalButtonCount = props["List Buttons"].Value -- this reads the property "Number of Buttons" and we use this below to layout the desired buttons
+  local ScrollingButtonCount = props["Scrolling Buttons"].Value -- this reads the property "Visible Buttons" and we use this below to layout the desired buttons
+  local Orientation = props["Orientation"].Value
+  
+  local ButtonPrimaryOffColor = {235,245,252}
+  local ButtonPrimaryOnColor = {5, 97, 165}
+  local ButtonStrokeColor = {5, 97, 165}
+  local TextPrimaryColor = {51,51,51}
+  local GroupBoxFillColor =  {235,245,252}
+  local GroupBoxStrokeColor = {5, 97, 165}
+  local TextFont = "OpenSans"
+  local TextFontStyle = "Light"
+  
+  
+  ------------------ page 1
+  if CurrentPage == "Scrolling" then
+    
+    ----------------- scrolling page graphics
+    if Orientation == "Vertical" then
+        -- groupbox background
+        table.insert(graphics,{
+          Type = "GroupBox",
+          Text = "Scrolling List",
+          HTextAlign = "Center",
+          Fill = GroupBoxFillColor,
+          StrokeWidth = 1,
+          StrokeColor = GroupBoxStrokeColor,
+          CornerRadius = 5,
+          Position = {2,2},
+          Size = {210,ScrollingButtonCount*20+165},
+          ZOrder = -1,
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+        })
+        -- output selection header
+        table.insert(graphics,{
+          Type = "Header",
+          Text = "Selection",
+          Position = {41,ScrollingButtonCount*20+75},
+          Size = {135,15},
+          FontSize = 12,
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+          TextColor = TextPrimaryColor,
+          HTextAlign = "Center",
+        })  
+        -- output selection label : Legend
+        table.insert(graphics,{
+          Type = "Label",
+          Text = "Legend",
+          Position = {9,ScrollingButtonCount*20+110},
+          Size = {65,20},
+          FontSize = 10,
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+          TextColor = TextPrimaryColor,
+          HTextAlign = "Center",
+          Margin = 1,
+        })  
+        -- output selection label : Value
+        table.insert(graphics,{
+          Type = "Label",
+          Text = "Value",
+          Position = {74,ScrollingButtonCount*20+110},
+          Size = {65,20},
+          FontSize = 10,
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+          TextColor = TextPrimaryColor,
+          HTextAlign = "Center",
+          Margin = 1,
+        }) 
+        -- output selection label : ComboBox
+        table.insert(graphics,{
+          Type = "Label",
+          Text = "ComboBox",
+          Position = {139,ScrollingButtonCount*20+110},
+          Size = {65,20},
+          FontSize = 10,
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+          TextColor = TextPrimaryColor,
+          HTextAlign = "Center",
+          Margin = 1,
+        })
+        -- output selection Control : Legend
+        layout["Selected Legend"] = { 
+          PrettyName = "Selected~Legend",
+          Style = "Text",
+          Position = {9,ScrollingButtonCount*20+130},
+          Size = {65,20},
+          Color = {255,255,255},
+          FontSize = 8,
+          Margin = 1,
+          HTextAlign = "Center",
+          IsReadOnly = false,
+        }
+        -- output selection Control : Value
+        layout["Selected Value"] = {
+          PrettyName = "Selected~Value", 
+          Style = "Text",
+          Position = {74,ScrollingButtonCount*20+130},
+          Size = {65,20},
+          Color = {255,255,255},
+          FontSize = 8,
+          Margin = 1,
+          HTextAlign = "Center",
+          IsReadOnly = false,
+        }
+        -- output selection Control : Selection
+        layout["ComboBox"] = {
+          PrettyName = "Selection",
+          Style = "ComboBox",
+          Position = {139,ScrollingButtonCount*20+130},
+          Size = {65,20},
+          Color = {255,255,255},
+          FontSize = 8,
+          Margin = 1,
+          HTextAlign = "Center",
+          IsReadOnly = false,
+        }
+        -- reset list & selection
+        layout['Reset'] = {           
+          Style = "Button",
+          PrettyName = ("Scrolling List~Reset"),
+          ButtonStyle = "Trigger",
+          ButtonVisualStyle = "Gloss",
+          WordWrap = true,
+          Position = {9,ScrollingButtonCount*20+72},
+          Size = {20,20},
+          Color = ButtonPrimaryOnColor,
+          UnlinkOffColor = true ,
+          OffColor = ButtonPrimaryOffColor,
+          StrokeColor = ButtonStrokeColor,
+          Margin = 1,
+          IsReadOnly = false,
+          IconColor = ButtonPrimaryOnColor,
+        }
+        -- Selected Legend Display
+        layout["Selected Legend Display"] = {           
+          Style = "Text",
+          PrettyName = "Selection Display",
+          TextBoxStyle = "NoBackground",
+          Font = TextFont,
+          TextColor = ButtonStrokeColor,
+          FontStyle = TextFontStyle,
+          HTextAlign = "Center",
+          WordWrap = false,
+          Position = {41,ScrollingButtonCount*20+90},
+          Size = {135,20},
+          FontSize = 12,
+          IsReadOnly = true,
+          Margin = 1,
+        }
+        -- scrolling list nav up
+        layout['Nav Up'] = {           
+          Style = "Button",
+          PrettyName = ("Scrolling List~Nav Up"),
+          ButtonStyle = "Momentary",
+          ButtonVisualStyle = "Gloss",
+          WordWrap = true,
+          Position = {168,50},
+          Size = {20,20},
+          Color = ButtonPrimaryOnColor,
+          UnlinkOffColor = true ,
+          OffColor = ButtonPrimaryOffColor,
+          StrokeColor = ButtonStrokeColor,
+          Margin = 1,
+          IsReadOnly = false,
+          IconColor = ButtonPrimaryOnColor,
+        }
+        -- scrolling list nav down
+        layout['Nav Down'] = {         
+          Style = "Button",
+          PrettyName = ("Scrolling List~Nav Down"),
+          ButtonStyle = "Momentary",
+          ButtonVisualStyle = "Gloss",
+          WordWrap = true,
+          Position = {168,50+(ScrollingButtonCount*20)-20},
+          Size = {20,20},
+          Color =ButtonPrimaryOnColor,
+          UnlinkOffColor = true ,
+          OffColor = ButtonPrimaryOffColor,
+          StrokeColor = ButtonStrokeColor,
+          Margin = 1,
+          IsReadOnly = false,
+          IconColor = ButtonPrimaryOnColor,
+        }
+        -- scrolling list slider
+        layout['Slider'] = {           
+          Style = "Fader",
+          PrettyName = ("Scrolling List~Slider"),
+          Position = {145,50},
+          Size = {22,ScrollingButtonCount*20},
+          Color = ButtonPrimaryOnColor,
+          Margin = 1,
+          IsReadOnly = false,
+        }
+        
+        ---- for loop to interate laying out the controls on the page
+        for i=1, ScrollingButtonCount do   
+          
+          -- Dynamic text indicators that identify where the button is on the list
+          layout["Scrolling Button Int "..i] = {           
+            Style = "Text",
+            PrettyName = string.format("Scrolling Button~%i~Number", i),
+            TextBoxStyle = "NoBackground",
+            Font = TextFont,
+            FontStyle = TextFontStyle,
+            HTextAlign = "Right",
+            WordWrap = false,
+            Position = {50,i*20+30},
+            Size = {25,20},
+            FontSize = 12,
+            IsReadOnly = true,
+            Margin = 1,
+          }
+  
+          -- Scrolling Selection Buttons
+          layout["Scrolling Button "..i] = {           
+            Style = "Button",
+            PrettyName = string.format("Scrolling List~Button %i~Select", i),
+            ButtonStyle = "Toggle",
+            ButtonVisualStyle = "Gloss",
+            WordWrap = true,
+            Position = {75,i*20+30},
+            Size = {65,20},
+            Color = ButtonPrimaryOnColor,
+            UnlinkOffColor = true ,
+            OffColor = ButtonPrimaryOffColor,
+            StrokeColor = ButtonStrokeColor,
+            Margin = 1,
+            IsReadOnly = false,
+          }
+  
+          -- Selector Selection Triggers - Not shown on layout but has to be defined to expose the control pins (PrettyName)
+          layout["Scrolling Trigger "..i] = {           
+            PrettyName = string.format("Scrolling List~Button %i~Trigger", i),
+            IsReadOnly = false,
+            Style = "None", -- "None" will prevent controls from showing on the page.
+          }
+        end
+    
+    elseif Orientation == "Horizontal" then
+  
+      local GroupBoxHorSize = ScrollingButtonCount*65+126
+  
+      -- groupbox background
+      table.insert(graphics,{
+        Type = "GroupBox", 
+        Text = "Scrolling List",
+        HTextAlign = "Center",
+        Fill = GroupBoxFillColor,
+        StrokeWidth = 1,
+        StrokeColor = GroupBoxStrokeColor,
+        CornerRadius = 5,
+        Position = {2,2},
+        Size = {GroupBoxHorSize,215},
+        ZOrder = -1,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+      })
+      -- output selection header
+      table.insert(graphics,{
+        Type = "Header",
+        Text = "Selection",
+        Position = {GroupBoxHorSize/2-68,120},
+        Size = {135,15},
+        FontSize = 12,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+        TextColor = TextPrimaryColor,
+        HTextAlign = "Center",
+      })  
+      -- output selection label : Legend
+      table.insert(graphics,{
+        Type = "Label",
+        Text = "Legend",
+        Position = {GroupBoxHorSize/2-98,155},
+        Size = {65,20},
+        FontSize = 10,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+        TextColor = TextPrimaryColor,
+        HTextAlign = "Center",
+        Margin = 1,
+      })  
+      -- output selection label : Value
+      table.insert(graphics,{
+        Type = "Label",
+        Text = "Value",
+        Position = {GroupBoxHorSize/2-33,155},
+        Size = {65,20},
+        FontSize = 10,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+        TextColor = TextPrimaryColor,
+        HTextAlign = "Center",
+        Margin = 1,
+      }) 
+      -- output selection label : ComboBox
+      table.insert(graphics,{
+        Type = "Label",
+        Text = "ComboBox",
+        Position = {GroupBoxHorSize/2+32,155},
+        Size = {65,20},
+        FontSize = 10,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+        TextColor = TextPrimaryColor,
+        HTextAlign = "Center",
+        Margin = 1,
+      })
+      -- output selection Control : Legend
+      layout["Selected Legend"] = { 
+        PrettyName = "Select~Legend",
+        Style = "Text",
+        Position = {GroupBoxHorSize/2-98,175},
+        Size = {65,20},
+        Color = {255,255,255},
+        FontSize = 8,
+        Margin = 1,
+        HTextAlign = "Center",
+        IsReadOnly = false,
+      }
+      -- output selection Control : Value
+      layout["Selected Value"] = {
+        PrettyName = "Select~Value", 
+        Style = "Text",
+        Position = {GroupBoxHorSize/2-33,175},
+        Size = {65,20},
+        Color = {255,255,255},
+        FontSize = 8,
+        Margin = 1,
+        HTextAlign = "Center",
+        IsReadOnly = false,
+      }
+      -- output selection Control : Selection
+      layout["ComboBox"] = {
+        PrettyName = "Selection",
+        Style = "ComboBox",
+        Position = {GroupBoxHorSize/2+32,175},
+        Size = {65,20},
+        Color = {255,255,255},
+        FontSize = 8,
+        Margin = 1,
+        HTextAlign = "Center",
+        IsReadOnly = false,
+      }
+      -- reset list & selection
+      layout['Reset'] = {           
+        Style = "Button",
+        PrettyName = ("Scrolling List~Reset"),
+        ButtonStyle = "Trigger",
+        ButtonVisualStyle = "Gloss",
+        WordWrap = true,
+        Position = {GroupBoxHorSize/2-98,118},
+        Size = {20,20},
+        Color = ButtonPrimaryOnColor,
+        UnlinkOffColor = true ,
+        OffColor = ButtonPrimaryOffColor,
+        StrokeColor = ButtonStrokeColor,
+        Margin = 1,
+        IsReadOnly = false,
+        IconColor = ButtonPrimaryOnColor,
+      }
+      -- Selected Legend Display
+      layout["Selected Legend Display"] = {           
+        Style = "Text",
+        PrettyName = "Selection Display",
+        TextBoxStyle = "NoBackground",
+        Font = TextFont,
+        TextColor = ButtonStrokeColor,
+        FontStyle = TextFontStyle,
+        HTextAlign = "Center",
+        WordWrap = false,
+        Position = {GroupBoxHorSize/2-68,135},
+        Size = {135,20},
+        FontSize = 12,
+        IsReadOnly = true,
+        Margin = 1,
+      }
+  
+      -- scrolling list nav left
+      layout['Nav Left'] = {           
+        Style = "Button",
+        PrettyName = ("Scrolling List~Nav Left"),
+        ButtonStyle = "Momentary",
+        ButtonVisualStyle = "Gloss",
+        WordWrap = true,
+        Position = {45,90},
+        Size = {20,20},
+        Color = ButtonPrimaryOnColor,
+        UnlinkOffColor = true ,
+        OffColor = ButtonPrimaryOffColor,
+        StrokeColor = ButtonStrokeColor,
+        Margin = 1,
+        IsReadOnly = false,
+        IconColor = ButtonPrimaryOnColor,
+      }
+      -- scrolling list nav down
+      layout['Nav Right'] = {         
+        Style = "Button",
+        PrettyName = ("Scrolling List~Nav Right"),
+        ButtonStyle = "Momentary",
+        ButtonVisualStyle = "Gloss",
+        WordWrap = true,
+        Position = {65+(ScrollingButtonCount*65),90},
+        Size = {20,20},
+        Color =ButtonPrimaryOnColor,
+        UnlinkOffColor = true ,
+        OffColor = ButtonPrimaryOffColor,
+        StrokeColor = ButtonStrokeColor,
+        Margin = 1,
+        IsReadOnly = false,
+        IconColor = ButtonPrimaryOnColor,
+      }
+      -- scrolling list slider
+      layout['Slider'] = {           
+        Style = "Fader",
+        PrettyName = ("Scrolling List~Slider"),
+        Position = {65,90},
+        Size = {ScrollingButtonCount*65,20},
+        Color = ButtonPrimaryOnColor,
+        Margin = 1,
+        IsReadOnly = false,
+      }
+  
+      ---- for loop to interate laying out the controls on the page
+      for i=1, ScrollingButtonCount do  
+        
+        local ScrollingButtonHorPos = i*65
+        
+        -- Dynamic text indicators that identify where the button is on the list
+        layout["Scrolling Button Int "..i] = {           
+          Style = "Text",
+          PrettyName = string.format("Scrolling List~Button %i~Number", i),
+          TextBoxStyle = "NoBackground",
+          Font = TextFont,
+          FontStyle = TextFontStyle,
+          HTextAlign = "Right",
+          WordWrap = false,
+          Position = {ScrollingButtonHorPos,45},
+          Size = {65,20},
+          FontSize = 12,
+          HTextAlign = "Center",
+          IsReadOnly = true,
+          Margin = 1,
+        }
+  
+        -- Scrolling Selection Buttons
+        layout["Scrolling Button "..i] = {           
+          Style = "Button",
+          PrettyName = string.format("Scrolling List~Button %i~Select", i),
+          ButtonStyle = "Toggle",
+          ButtonVisualStyle = "Gloss",
+          WordWrap = true,
+          Position = {ScrollingButtonHorPos,65},
+          Size = {65,20},
+          Color = ButtonPrimaryOnColor,
+          UnlinkOffColor = true ,
+          OffColor = ButtonPrimaryOffColor,
+          StrokeColor = ButtonStrokeColor,
+          Margin = 1,
+          IsReadOnly = false,
+        }
+  
+        -- Selector Selection Triggers - Not shown on layout but has to be defined to expose the control pins (PrettyName)
+        layout["Scrolling Trigger "..i] = {           
+          PrettyName = string.format("Scrolling List~Button %i~Trigger", i),
+          IsReadOnly = false,
+          Style = "None", -- "None" will prevent controls from showing on the page.
+        }
+      end
+  
+  
+    end
+  
+  
+  
+  
+  ------------------ page 2 layout
+  elseif CurrentPage == "List" then
+  
+  
+    ----------------- List page graphics
+    -- groupbox background
+    table.insert(graphics,{
+      Type = "GroupBox",
+      Text = "List Properties",
+      HTextAlign = "Center",
+      Fill = GroupBoxFillColor,
+      StrokeWidth = 1,
+      StrokeColor = GroupBoxStrokeColor,
+      CornerRadius = 5,
+      Position = {2,2},
+      Size = {260,TotalButtonCount*20+55},
+      ZOrder = -1,
+      Font = TextFont,
+      FontStyle = TextFontStyle,
+    })
+    table.insert(graphics,{
+      Type = "Label",
+      Text = "Select",
+      Position = {35,25},
+      Size = {65,15},
+      FontSize = 12,
+      Font = TextFont,
+      FontStyle = TextFontStyle,
+      TextColor = TextPrimaryColor,
+      HTextAlign = "Center",
+    })  
+    table.insert(graphics,{
+      Type = "Label",
+      Text = "Legend",
+      Position = {105,25},
+      Size = {65,15},
+      FontSize = 12,
+      Font = TextFont,
+      FontStyle = TextFontStyle,
+      TextColor = TextPrimaryColor,
+      HTextAlign = "Center",
+    })  
+    table.insert(graphics,{
+      Type = "Label",
+      Text = "Value",
+      Position = {175,25},
+      Size = {50,15},
+      FontSize = 12,
+      Font = TextFont,
+      FontStyle = TextFontStyle,
+      TextColor = TextPrimaryColor,
+      HTextAlign = "Center",
+    }) 
+  
+  
+    
+    
+    
+  
+    ----------------- List page controls
+    
+    ---- for loop to interate laying out the controls on the page
+    
+    for i=1, TotalButtonCount do  
+      -- static text boxes telling you what number control
+      table.insert(graphics,{
+        Type = "Text",
+        Text = string.format("%i",i),
+        Position = {10,i*20+21},
+        Size = {25,20},
+        FontSize = 12,
+        HTextAlign = "Right",
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+      })
+  
+      -- Selector Buttons
+      layout["Button "..i] = {           
+        Style = "Button",
+        PrettyName = string.format("Main List~Button %i~Select", i),
+        ButtonStyle = "Toggle",
+        ButtonVisualStyle = "Gloss",
+        WordWrap = true,
+        Position = {35,i*20+21},
+        Size = {65,20},
+        Color = ButtonPrimaryOnColor,
+        UnlinkOffColor = true ,
+        OffColor = ButtonPrimaryOffColor,
+        StrokeColor = ButtonStrokeColor,
+        Margin = 1,
+        IsReadOnly = false,
+        Font = TextFont,
+        FontStyle = TextFontStyle,
+      }
+      -- Selector Button Legends
+      layout["Legend "..i] = {           
+        Style = "Text",
+        PrettyName = string.format("Main List~Button %i~Legend", i),
+        TextBoxStyle = "Normal",
+        HTextAlign = "Left",
+        WordWrap = true,
+        Position = {105,i*20+21},
+        Size = {65,20},
+        Color = { 255,255,255},
+        Margin = 1,
+        Padding = 2,
+        IsReadOnly = false,
+      }
+      -- Selector Button Value
+      layout["Value "..i] = {           
+        Style = "Text",
+        PrettyName = string.format("Main List~Button %i~Value", i),
+        TextBoxStyle = "Normal",
+        HTextAlign = "Left",
+        WordWrap = true,
+        Position = {175,i*20+21},
+        Size = {50,20},
+        Color = { 255,255,255},
+        Margin = 1,
+        Padding = 2,
+        IsReadOnly = false,
+      }
+      -- Selector Buttons - Not shown on layout but has to be defined to expose the control pins (PrettyName)
+      layout["Trigger "..i] = {           
+        PrettyName = string.format("Main List~Button %i~Trigger", i),
+        IsReadOnly = false,
+        Style = "None", -- "None" will prevent controls from showing on the page.
+      }
+    end
+  
+  
+  end
+  return layout, graphics
+end
+
+--Start event based logic
+if Controls then
+  --[[ ************ Constants ************ ]]--
+  e = System.IsEmulating
+  DebugPrint = Properties["Debug Print"].Value
+  local MaxButtons = Properties["List Buttons"].Value -- this reads the property "Desired Buttons" and we use this below
+  local NumScrollingButtons = Properties["Scrolling Buttons"].Value -- this reads the property "Desired Buttons" and we use this below
+  local CurrentPosition = 0
+  Controls['Slider'].Position = 1
+  PressAndHoldTimer = Timer.New()
+  PressAndHoldVal1 = 0.3
+  PressAndHoldVal2 = 2.5/MaxButtons
+  PressAndHoldTimerInitialPress = false
+  
+  --[[ ************ Tables ************ ]]--
+  ValueTable = {}
+  LegendTable = {}
+  
+  --[[ ************ Functions ************ ]]--
+  -- A function to determine common print statement scenarios for troubleshooting
+  function SetupDebugPrint()
+    if(DebugFunction)then print("SetupDebugPrint") end
+    if DebugPrint=="Tx/Rx" then
+      DebugTx,DebugRx=true,true
+    elseif DebugPrint=="Tx" then
+      DebugTx=true
+    elseif DebugPrint=="Rx" then
+      DebugRx=true
+    elseif DebugPrint=="Function Calls" then
+      DebugFunction=true
+    elseif DebugPrint=="All" then
+      DebugTx,DebugRx,DebugFunction=true,true,true
+    end
+  end
+  
+  
+  -- A function for mutually exclusive button selections
+  function SetSelected(n)
+    if(DebugFunction)then print("SetSelected entered with "..n)end
+    for i, Ctrl in pairs(Controls["Button"]) do
+      Ctrl.Boolean = (i == n)   --this looks at every Ctrl and asks "is i = n", and if it not then the boolean is false  
+    end
+  
+    --update the controls to the last selected trigger, value, legend
+    if n == 0 then
+        Controls['Selected Value'].String = ""
+        Controls['Selected Legend'].String = ""
+        Controls['ComboBox'].String = ""
+        Controls['Selected Legend Display'].String = ""
+    else 
+        Controls["Trigger"][n]:Trigger()
+        Controls['Selected Value'].String = ValueTable[n]
+        Controls['Selected Legend'].String = LegendTable[n]
+        Controls['ComboBox'].String = LegendTable[n]
+        Controls['Selected Legend Display'].String = LegendTable[n]
+    end
+    
+    -- update the Scrolling Buttons
+    UpdateScrollingButons()
+  end
+  
+  
+  -- A function to grab the strings in the legend inputs, and insert them into the "LegendTable" table
+  function UpdateLegendTable()
+    if(DebugFunction)then 
+      print ("UpdateLegendTable") 
+      print (string.format("LegendTable has %u entries.", #LegendTable))
+    end
+  
+    --clear the LegendTable first
+    for idx in pairs (LegendTable) do
+      LegendTable[idx] = nil
+    end
+  
+    -- build the table
+    for i = 1, MaxButtons do
+      if(DebugFunction)then print (string.format(".\tEntry %u : %s", i, Controls['Legend'][i].String)) end
+      table.insert(LegendTable, i, Controls['Legend'][i].String)
+      Controls["Button"][i].Legend = LegendTable[i]
+    end
+  
+    -- assign new table to the combobox
+    Controls['ComboBox'].Choices = LegendTable
+  
+    -- update the Scrolling Buttons
+    UpdateScrollingButons()
+  end
+  
+  
+  -- A function to grab the strings in the Value inputs, and insert them into the "ValueTable" table
+  function UpdateValueTable()
+    if(DebugFunction)then 
+      print ("UpdateValueTable") 
+      print (string.format("ValueTable has %u entries.", #ValueTable))
+    end
+  
+    --clear the table first
+    for idx in pairs (ValueTable) do
+      ValueTable[idx] = nil
+    end
+  
+    -- build the table
+    for i = 1, MaxButtons do
+      if(DebugFunction)then print (string.format(".\tEntry %u : %s", i, Controls['Value'][i].String)) end
+      table.insert(ValueTable, i, Controls['Value'][i].String)
+    end
+  
+  end
+  
+  -- A function that updates the Scrolling Buttons Legends and Boolean
+  function UpdateScrollingButons(k)
+  
+    -- arg k was put here to catch when the slider calls this function
+    local wasItSlider
+    if k == nil then 
+      wasItSlider = false
+    else 
+      wasItSlider = true
+    end 
+  
+    for i = 1, NumScrollingButtons do 
+  
+        -- update button legend
+        Controls['Scrolling Button'][i].Legend = LegendTable[CurrentPosition+i]
+  
+        -- update actual button index for reference
+        Controls['Scrolling Button Int'][i].String = math.floor(CurrentPosition+i)
+  
+        -- update the scrolling button boolean
+        if Controls['Button'][CurrentPosition+i].Boolean then 
+          Controls['Scrolling Button'][i].Boolean = true
+        else
+          Controls['Scrolling Button'][i].Boolean = false
+        end 
+  
+    end 
+    if CurrentPosition == 0 then 
+        Controls['Nav Up'].IsDisabled = true 
+        Controls['Nav Left'].IsDisabled = true 
+    else 
+        Controls['Nav Up'].IsDisabled = false 
+        Controls['Nav Left'].IsDisabled = false 
+    end
+  
+    if CurrentPosition == MaxButtons-NumScrollingButtons then 
+        Controls['Nav Down'].IsDisabled = true 
+        Controls['Nav Right'].IsDisabled = true 
+    else 
+        Controls['Nav Down'].IsDisabled = false 
+        Controls['Nav Right'].IsDisabled = false 
+    end
+  
+    -- update slider
+    if wasItSlider == false then
+      Controls['Slider'].Value = MaxButtons-CurrentPosition
+    end 
+  end 
+  
+  function NavButtons(direction)
+      if direction == "Up" then   
+          if CurrentPosition > 0 then
+            CurrentPosition = CurrentPosition - 1
+            UpdateScrollingButons()
+          end
+      elseif direction == "Down" then 
+          if CurrentPosition < MaxButtons-NumScrollingButtons then
+            CurrentPosition = CurrentPosition + 1
+            UpdateScrollingButons()
+          end
+      end
+  end 
+  
+  
+  
+  
+  --[[ ************ EventHandlers ************ ]]--
+  -- full button list selection button EH
+  for i, Ctrl in pairs (Controls["Button"]) do
+    Ctrl.EventHandler = function()
+      SetSelected(i)
+    end
+  end
+  
+  -- full button list selection button legend EH
+  for i, Ctrl in pairs (Controls['Legend']) do
+    Ctrl.EventHandler = function()
+      UpdateLegendTable()
+      Controls['User Input Flag'].Boolean = true
+    end
+  end
+  
+  -- full button list selection button value EH
+  for i, Ctrl in pairs (Controls['Value']) do
+    Ctrl.EventHandler = function()
+      UpdateValueTable()
+    end
+  end
+  
+  -- full button list selection trigger EH
+  for i, Ctrl in pairs (Controls["Trigger"]) do
+    Ctrl.EventHandler = function()
+      SetSelected(i)
+    end
+  end
+  
+  -- scrolling button list nav up EH
+  Controls['Nav Up'].EventHandler = function(ctl)
+      if ctl.Boolean then 
+          NavButtons("Up")
+          PressAndHoldTimerInitialPress = true
+          PressAndHoldTimer:Start(PressAndHoldVal1)
+      else
+          PressAndHoldTimer:Stop()
+          PressAndHoldTimerInitialPress = false
+      end
+  end
+  
+  -- scrolling button list nav down EH
+  Controls['Nav Down'].EventHandler = function(ctl)
+      if ctl.Boolean then 
+          NavButtons("Down")
+          PressAndHoldTimerInitialPress = true
+          PressAndHoldTimer:Start(PressAndHoldVal1)
+      else
+          PressAndHoldTimer:Stop()
+          PressAndHoldTimerInitialPress = false
+      end
+  end
+  
+  -- scrolling button list nav left EH
+  Controls['Nav Left'].EventHandler = function(ctl)
+      if ctl.Boolean then 
+          NavButtons("Up")
+          PressAndHoldTimerInitialPress = true
+          PressAndHoldTimer:Start(PressAndHoldVal1)
+      else
+          PressAndHoldTimer:Stop()
+          PressAndHoldTimerInitialPress = false
+      end
+  end
+  
+  -- scrolling button list nav right EH
+  Controls['Nav Right'].EventHandler = function(ctl)
+      if ctl.Boolean then 
+          NavButtons("Down")
+          PressAndHoldTimerInitialPress = true
+          PressAndHoldTimer:Start(PressAndHoldVal1)
+      else
+          PressAndHoldTimer:Stop()
+          PressAndHoldTimerInitialPress = false
+      end
+  end
+  -- scrolling button list reset trigger EH
+  Controls['Reset'].EventHandler = function()
+      CurrentPosition = 0
+      SetSelected(0)
+  end
+  
+  -- scrolling button list selection buttons EH
+  for i, Ctrl in pairs (Controls["Scrolling Button"]) do
+    Ctrl.EventHandler = function()
+      -- chooses the right actual button index, instead of the scrolling button index
+      SetSelected(CurrentPosition+i)
+    end
+  end
+  
+  -- scrolling Slider changes EH
+  Controls['Slider'].EventHandler = function(ctl)
+      CurrentPosition = MaxButtons-ctl.Value
+      UpdateScrollingButons(1)
+  end 
+  
+  -- the main Value input pin has changed
+  Controls['Selected Value'].EventHandler = function(ctl)
+    if(DebugFunction)then print (string.format("Value changed : %s", ctl.String)) end
+    s = ctl.String
+    for k, v in pairs (ValueTable) do
+      if s == v then 
+        SetSelected(k)
+      end
+    end
+  end
+  
+  -- the main legend input pin has changed
+  Controls['Selected Legend'].EventHandler = function(ctl)
+    if(DebugFunction)then print (string.format("Legend changed : %s", ctl.String)) end
+    s = ctl.String
+    for k, v in pairs (LegendTable) do
+      if s == v then 
+        SetSelected(k)
+      end
+    end
+  end
+  
+  -- the main SelectionComboBox user control has changed
+  Controls['ComboBox'].EventHandler = function(ctl)
+    if(DebugFunction)then print (string.format("SelectionComboBox changed : %s", ctl.String)) end
+    s = ctl.String
+    for k, v in ipairs (LegendTable) do
+      if s == v then
+        SetSelected(k)
+      end
+    end
+  end
+  
+  -- PressAndHoldTimer expires
+  PressAndHoldTimer.EventHandler = function()
+  
+      -- upon first entry of this EVT, start a new timer with a faster value
+      if PressAndHoldTimerInitialPress == true then  
+          PressAndHoldTimerInitialPress = false
+          PressAndHoldTimer:Stop()
+          PressAndHoldTimer:Start(PressAndHoldVal2)
+      end
+  
+      if Controls['Nav Up'].Boolean or Controls['Nav Left'].Boolean then 
+        NavButtons("Up")
+      elseif Controls['Nav Down'].Boolean or Controls['Nav Right'].Boolean  then 
+        NavButtons("Down")
+      else 
+        PressAndHoldTimer:Stop()
+      end
+  end
+  
+  
+  --[[ ************ On Start ************ ]]--
+  
+  if Controls then
+    -- print general info
+    print("=== Starting "..PluginInfo.Name.." V"..PluginInfo.Version.." ===")
+  
+    -- print if system is live or emulating
+    if e then
+      print("System Is Emulating")
+    else
+      print("System Is Live With Core")
+    end
+  
+    -- setup debug
+    SetupDebugPrint()
+  
+    -- updated the LegendTable
+    UpdateLegendTable()
+  
+    -- updated the ValueTable
+    UpdateValueTable()
+  
+    -- updated the SelectionComboBox.Choices with the LegendTable
+    Controls['ComboBox'].Choices = LegendTable
+  
+    -- assign generic button legends and values if no user input has occurred
+    if Controls['User Input Flag'].Boolean == false then 
+      print("Starting Fresh")
+      for i,v in pairs (Controls['Legend']) do 
+          v.String = "Button "..i
+      end
+      
+      for i,v in pairs (Controls['Value']) do 
+          v.String = i
+      end
+  
+      UpdateLegendTable()
+      UpdateValueTable()
+    else
+      print("Using Previously Entered Legends and Values")
+  
+    end
+   
+  end
+end
