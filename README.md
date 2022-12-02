@@ -2,7 +2,7 @@
 
 This plugin creates a vertical or horizonal "scrolling" list of between 2 and 10 buttons. 
 
-The scrolling list pull from a main list of up to 50 entries where you can enter discreet legends and values associated with each list item. 
+The scrolling list pulls from a main list of up to 50 entries where you can enter discreet legends and values associated with each list item. 
 
 The Scrolling Buttons property must be smaller than the List Buttons property.
 
